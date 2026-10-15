@@ -1,16 +1,5 @@
 [
   {
-    "id": "garage",
-    "category": "garage",
-    "kicker": "GARAGE",
-    "title": "ТЮНИНГ",
-    "desc": "Гараж — место, где машина становится твоей. Внешние детали и технические компоненты работают как единая система.",
-    "engine": "НАСТРОЙКА",
-    "drive": "RWD / AWD",
-    "tune": "БЕЗ ОГРАНИЧЕНИЙ",
-    "image": "assets/city-clean.jpg"
-  },
-  {
     "id": "street2",
     "category": "street",
     "kicker": "STREET CLASS",
