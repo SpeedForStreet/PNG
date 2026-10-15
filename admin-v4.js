@@ -26,13 +26,14 @@ function richEditor(id,value,placeholder){
     <button type="button" data-cmd="insertUnorderedList">• Список</button>
     <button type="button" data-cmd="insertOrderedList">1. Список</button>
     <button type="button" data-cmd="createLink">🔗 Ссылка</button>
-    <button type="button" data-cmd="removeFormat">Очистить</button>
+    <button type="button" data-cmd="removeFormat">Очистить</button>${id==="n_text"?'<button type="button" data-image-upload>🖼 ИЗОБРАЖЕНИЕ</button><input class="rich-image-input hidden" type="file" accept="image/png,image/jpeg,image/webp" multiple>':""}
   </div><div id="${id}" class="rich-content" contenteditable="true" data-placeholder="${escapeHtml(placeholder)}">${editorHtml(value)}</div></div>`;
 }
 function initRichEditors(){
   document.querySelectorAll(".rich-toolbar").forEach(toolbar=>{
     toolbar.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
       const editor=document.getElementById(toolbar.dataset.editor); if(!editor)return;
+      if(btn.hasAttribute("data-image-upload")){chooseNewsImages(editor,toolbar);return;}
       editor.focus();
       const cmd=btn.dataset.cmd;
       if(cmd==="createLink"){const url=prompt("Вставь ссылку:","https://");if(url)document.execCommand("createLink",false,url);}
@@ -40,6 +41,91 @@ function initRichEditors(){
       else document.execCommand(cmd,false,null);
     }));
   });
+}
+const savedImageRanges=new Map();
+function blobToDataURL(blob){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||""));
+    reader.onerror=()=>reject(new Error("Не удалось прочитать изображение."));
+    reader.readAsDataURL(blob);
+  });
+}
+async function prepareNewsImage(file){
+  if(!["image/png","image/jpeg","image/webp"].includes(file.type))throw new Error("Поддерживаются изображения PNG, JPG и WebP.");
+  if(file.size>25*1024*1024)throw new Error("Размер изображения превышает 25 МБ.");
+  const bitmap=await createImageBitmap(file);
+  const scale=Math.min(1,1920/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement("canvas");
+  canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+  canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  const context=canvas.getContext("2d");
+  if(!context)throw new Error("Не удалось обработать изображение.");
+  context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+  if(bitmap.close)bitmap.close();
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("Не удалось оптимизировать изображение.")),"image/webp",0.86);
+  });
+}
+function chooseNewsImages(editor,toolbar){
+  const input=toolbar.querySelector(".rich-image-input");
+  if(!input)return;
+  const selection=window.getSelection();
+  if(selection&&selection.rangeCount&&editor.contains(selection.getRangeAt(0).commonAncestorContainer)){
+    savedImageRanges.set(editor.id,selection.getRangeAt(0).cloneRange());
+  }else{
+    const range=document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    savedImageRanges.set(editor.id,range);
+  }
+  input.onchange=async()=>{
+    const files=Array.from(input.files||[]);
+    input.value="";
+    if(!files.length)return;
+    let markup="";
+    try{
+      const newsId=(($("#n_id")&&$("#n_id").value)||"news").trim().replace(/[^A-Za-z0-9_-]+/g,"-").slice(0,48)||"news";
+      for(let i=0;i<files.length;i++){
+        const file=files[i];
+        const dot=file.name.lastIndexOf(".");
+        const fallbackAlt=dot>0?file.name.slice(0,dot):file.name;
+        const enteredAlt=prompt("Альтернативный текст для изображения:",fallbackAlt);
+        const alt=(enteredAlt===null?"":enteredAlt.trim())||fallbackAlt;
+        const caption=(prompt("Подпись под изображением (необязательно):","")||"").trim();
+        const status=$("#saveStatus");
+        if(status)status.textContent="Загрузка изображения "+(i+1)+" из "+files.length+"…";
+        const blob=await prepareNewsImage(file);
+        const dataURL=await blobToDataURL(blob);
+        const imagePath="assets/news/"+newsId+"-"+Date.now()+"-"+(i+1)+".webp";
+        await api(imagePath,{
+          method:"PUT",
+          body:JSON.stringify({
+            message:"Upload news article image: "+newsId,
+            content:dataURL.slice(dataURL.indexOf(",")+1),
+            branch:BRANCH
+          })
+        });
+        markup+='<figure class="news-article-figure"><img src="'+imagePath+'" alt="'+escapeHtml(alt)+'" loading="lazy">'+(caption?'<figcaption>'+escapeHtml(caption)+'</figcaption>':"")+'</figure><p><br></p>';
+      }
+      editor.focus();
+      const savedRange=savedImageRanges.get(editor.id);
+      const activeSelection=window.getSelection();
+      if(savedRange&&activeSelection){
+        activeSelection.removeAllRanges();
+        activeSelection.addRange(savedRange);
+      }
+      document.execCommand("insertHTML",false,markup);
+      const status=$("#saveStatus");
+      if(status)status.textContent="Изображение загружено и вставлено. Нажми «СОХРАНИТЬ», чтобы сохранить статью.";
+    }catch(error){
+      const message=error&&error.message?error.message:String(error);
+      const status=$("#saveStatus");
+      if(status)status.textContent="Не удалось загрузить изображение: "+message;
+      alert("Не удалось загрузить изображение: "+message);
+    }
+  };
+  input.click();
 }
 function newsForm(n={},i=-1){
   $("#newsEditor").classList.remove("hidden");
