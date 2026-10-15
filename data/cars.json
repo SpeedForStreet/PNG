@@ -1,13 +1,1 @@
-[
-  {
-    "id": "street2",
-    "category": "street",
-    "kicker": "STREET CLASS",
-    "title": "НОЧНОЙ STREET",
-    "desc": "Городская конфигурация для вечерних улиц. Баланс тяги, тормозов и управляемости.",
-    "engine": "2.4 TURBO",
-    "drive": "RWD",
-    "tune": "STREET SETUP",
-    "image": "assets/street-01.jpg"
-  }
-]
+[]
