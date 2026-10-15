@@ -1,16 +1,5 @@
 [
   {
-    "id": "street",
-    "category": "street",
-    "kicker": "STREET CLASS",
-    "title": "ГОРОДСКОЙ СПОРТ",
-    "desc": "Автомобиль для первых серьёзных шагов. Настройка двигателя, подвески, шин и тормозов меняет его поведение на дороге.",
-    "engine": "2.0 TURBO",
-    "drive": "RWD",
-    "tune": "ЭКСТЕРЬЕР + ТЕХНИКА",
-    "image": "assets/car-clean.jpg"
-  },
-  {
     "id": "performance",
     "category": "performance",
     "kicker": "PERFORMANCE",
