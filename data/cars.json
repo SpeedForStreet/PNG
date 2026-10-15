@@ -1,16 +1,5 @@
 [
   {
-    "id": "performance",
-    "category": "performance",
-    "kicker": "PERFORMANCE",
-    "title": "СКОРОСТЬ",
-    "desc": "Более мощная конфигурация для тех, кто хочет чувствовать разницу между обычной городской машиной и спортивным автомобилем.",
-    "engine": "3.0 TWIN-TURBO",
-    "drive": "AWD",
-    "tune": "ПОЛНЫЙ ТЮНИНГ",
-    "image": "assets/hero-clean.jpg"
-  },
-  {
     "id": "garage",
     "category": "garage",
     "kicker": "GARAGE",
