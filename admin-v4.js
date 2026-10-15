@@ -31,15 +31,28 @@ function richEditor(id,value,placeholder){
 }
 function initRichEditors(){
   document.querySelectorAll(".rich-toolbar").forEach(toolbar=>{
-    toolbar.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
-      const editor=document.getElementById(toolbar.dataset.editor); if(!editor)return;
-      if(btn.hasAttribute("data-image-upload")){chooseNewsImages(editor,toolbar);return;}
-      editor.focus();
-      const cmd=btn.dataset.cmd;
-      if(cmd==="createLink"){const url=prompt("Вставь ссылку:","https://");if(url)document.execCommand("createLink",false,url);}
-      else if(cmd==="formatBlock")document.execCommand(cmd,false,btn.dataset.value);
-      else document.execCommand(cmd,false,null);
-    }));
+    toolbar.querySelectorAll("button").forEach(btn=>{
+      btn.addEventListener("mousedown",()=>{
+        if(!btn.hasAttribute("data-image-upload"))return;
+        const editor=document.getElementById(toolbar.dataset.editor);
+        const selection=window.getSelection();
+        if(!editor)return;
+        if(selection&&selection.rangeCount&&editor.contains(selection.getRangeAt(0).commonAncestorContainer)){
+          savedImageRanges.set(editor.id,selection.getRangeAt(0).cloneRange());
+        }else{
+          savedImageRanges.delete(editor.id);
+        }
+      });
+      btn.addEventListener("click",()=>{
+        const editor=document.getElementById(toolbar.dataset.editor); if(!editor)return;
+        if(btn.hasAttribute("data-image-upload")){chooseNewsImages(editor,toolbar);return;}
+        editor.focus();
+        const cmd=btn.dataset.cmd;
+        if(cmd==="createLink"){const url=prompt("Вставь ссылку:","https://");if(url)document.execCommand("createLink",false,url);}
+        else if(cmd==="formatBlock")document.execCommand(cmd,false,btn.dataset.value);
+        else document.execCommand(cmd,false,null);
+      });
+    });
   });
 }
 const savedImageRanges=new Map();
@@ -70,14 +83,16 @@ async function prepareNewsImage(file){
 function chooseNewsImages(editor,toolbar){
   const input=toolbar.querySelector(".rich-image-input");
   if(!input)return;
-  const selection=window.getSelection();
-  if(selection&&selection.rangeCount&&editor.contains(selection.getRangeAt(0).commonAncestorContainer)){
-    savedImageRanges.set(editor.id,selection.getRangeAt(0).cloneRange());
-  }else{
-    const range=document.createRange();
-    range.selectNodeContents(editor);
-    range.collapse(false);
-    savedImageRanges.set(editor.id,range);
+  if(!savedImageRanges.has(editor.id)){
+    const selection=window.getSelection();
+    if(selection&&selection.rangeCount&&editor.contains(selection.getRangeAt(0).commonAncestorContainer)){
+      savedImageRanges.set(editor.id,selection.getRangeAt(0).cloneRange());
+    }else{
+      const range=document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      savedImageRanges.set(editor.id,range);
+    }
   }
   input.onchange=async()=>{
     const files=Array.from(input.files||[]);
@@ -137,7 +152,7 @@ function newsForm(n={},i=-1){
 <div class="publish-box"><label class="publish-option"><input id="n_published" type="checkbox" ${n.published!==false?"checked":""}> ОПУБЛИКОВАТЬ НА САЙТЕ</label><label class="publish-option"><input id="n_telegram" type="checkbox" ${n.telegram===true?"checked":""}> ОТПРАВИТЬ В TELEGRAM</label></div>
 <div class="hint">Telegram отправляется автоматически после сохранения новости. Если галочка Telegram включена, бот отправит эту новость подписчикам один раз.</div>
 <div class="field"><label>КОРОТКОЕ ОПИСАНИЕ <small style="color:#777">(карточка на главной)</small></label>${richEditor("n_short",n.shortDescription||n.text||"","Напиши короткое описание новости...")}</div>
-<div class="field"><label>ПОЛНОЕ ОПИСАНИЕ <small style="color:#777">(открывается по «ЧИТАТЬ ДАЛЬШЕ»)</small></label>${richEditor("n_text",n.fullDescription||n.text||"","Напиши полную статью...")}</div>
+<div class="field"><label>ПОЛНОЕ ОПИСАНИЕ <small style="color:#777">(открывается по «ЧИТАТЬ ДАЛЬШЕ»)</small></label><p class="hint">Для вставки изображений нажми «🖼 ИЗОБРАЖЕНИЕ» в панели редактора ниже. После добавления фото нажми «СОХРАНИТЬ».</p>${richEditor("n_text",n.fullDescription||n.text||"","Напиши полную статью...")}</div>
 <div class="top-actions"><button class="primary" id="saveNews">СОХРАНИТЬ</button><button type="button" onclick="closeEditor('newsEditor')">ОТМЕНА</button></div>`;
   initRichEditors();
   $("#saveNews").onclick=async()=>{
